@@ -1,0 +1,13 @@
+[project]
+name = "tts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mlx-audio>=0.3.0",
+    "tiktoken",
+]
+
+[tool.uv]
+prerelease = "allow"
