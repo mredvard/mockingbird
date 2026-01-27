@@ -6,6 +6,7 @@ import uuid
 from ..schemas import Generation, GenerationRequest, BackendInfo, TaskStatus as TaskStatusSchema, GenerationTaskResponse
 from ..services import storage_service, tts_service, audio_service
 from ..services.progress import progress_tracker, TaskStatus
+from ..config import config
 
 router = APIRouter(prefix="/api/generations", tags=["generations"])
 
@@ -117,7 +118,7 @@ def _generate_speech_background(
         print(f"⏱️  Audio processing: {proc_time:.2f}s")
 
         # Add audio URL
-        generation_metadata["audio_url"] = f"/api/generations/{generation_metadata['id']}/audio"
+        generation_metadata["audio_url"] = f"{config.API_BASE_URL}/api/generations/{generation_metadata['id']}/audio"
 
         total_time = time.time() - start_time
         print(f"✅ Total background task time: {total_time:.2f}s")
@@ -202,7 +203,7 @@ async def generate_speech(request: GenerationRequest):
         )
 
         # Add audio URL
-        generation_metadata["audio_url"] = f"/api/generations/{generation_metadata['id']}/audio"
+        generation_metadata["audio_url"] = f"{config.API_BASE_URL}/api/generations/{generation_metadata['id']}/audio"
 
         return generation_metadata
 
@@ -225,7 +226,7 @@ async def list_generations(voice_id: Optional[str] = None):
 
     # Add audio URLs
     for gen in generations:
-        gen["audio_url"] = f"/api/generations/{gen['id']}/audio"
+        gen["audio_url"] = f"{config.API_BASE_URL}/api/generations/{gen['id']}/audio"
 
     return generations
 
@@ -242,7 +243,7 @@ async def get_generation(generation_id: str):
         raise HTTPException(status_code=404, detail="Generation not found")
 
     # Add audio URL
-    generation["audio_url"] = f"/api/generations/{generation_id}/audio"
+    generation["audio_url"] = f"{config.API_BASE_URL}/api/generations/{generation_id}/audio"
 
     return generation
 
