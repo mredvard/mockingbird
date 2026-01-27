@@ -1,10 +1,7 @@
 import numpy as np
-from pathlib import Path
 from typing import Optional
-import tempfile
 
 from mlx_audio.tts import load_model
-from mlx_audio.tts.generate import generate_audio
 import mlx.core as mx
 
 from .base import TTSBackend
@@ -43,72 +40,109 @@ class MLXBackend(TTSBackend):
         text: str,
         ref_audio_path: str,
         ref_text: str,
+        progress_callback=None,
         **kwargs
     ) -> np.ndarray:
         """
         Generate speech from text with voice cloning using MLX
 
-        Now uses the Python API directly instead of subprocess
+        Args:
+            text: Text to synthesize
+            ref_audio_path: Path to reference audio file
+            ref_text: Transcription of reference audio
+            progress_callback: Optional callback function(current, total, message)
+                              called with progress updates during generation
+            **kwargs: Additional arguments passed to model.generate()
+
+        Returns:
+            Audio data as numpy array (float32, mono)
         """
+        import time
+        from mlx_audio.tts.generate import load_audio
+
         if not self._model:
             raise RuntimeError("No model loaded. Call load_model() first.")
 
-        # Create temporary directory for output
-        temp_dir = tempfile.mkdtemp(prefix="tts_")
-        output_dir = Path(temp_dir)
+        print(f"\n🎵 Starting TTS generation...")
+        print(f"📝 Text: {text[:100]}{'...' if len(text) > 100 else ''}")
+        print(f"🎙️  Reference: {ref_audio_path}")
+        start_time = time.time()
 
         try:
-            # Generate audio using Python API directly
-            # This replaces the subprocess call with a direct function call
-            generate_audio(
-                text=text,
-                model=self._model,  # Pass loaded model instance
-                ref_audio=ref_audio_path,
-                ref_text=ref_text,
-                output_path=str(output_dir),
-                file_prefix="audio",
-                audio_format="wav",
-                play=False,
-                verbose=False,  # Set to True for debugging
-                join_audio=False,
+            # Load reference audio
+            if progress_callback:
+                progress_callback(1, 5, "Loading reference audio...")
+
+            ref_audio = load_audio(
+                ref_audio_path,
+                sample_rate=self._model.sample_rate,
+                volume_normalize=False
             )
 
-            # Find the generated audio file (saves as audio_000.wav, audio_001.wav, etc.)
-            audio_files = list(output_dir.glob("audio_*.wav"))
-            if not audio_files:
-                raise RuntimeError(f"TTS generation did not create any audio files in: {output_dir}")
+            load_time = time.time() - start_time
+            print(f"⏱️  Reference audio loaded in {load_time:.2f}s")
 
-            # Use the first audio file
-            output_path = audio_files[0]
+            # Prepare generation parameters
+            if progress_callback:
+                progress_callback(2, 5, "Preparing generation...")
 
-            if output_path.stat().st_size == 0:
-                raise RuntimeError(f"TTS generation created empty output file: {output_path}")
+            gen_kwargs = dict(
+                text=text,
+                ref_audio=ref_audio,
+                ref_text=ref_text,
+                verbose=True,  # Show generation stats
+                stream=False,
+                **kwargs,
+            )
 
-            # Read the generated audio using scipy
-            from scipy.io import wavfile
-            sample_rate, audio_data = wavfile.read(str(output_path))
+            # Generate audio - this returns a generator that yields results
+            if progress_callback:
+                progress_callback(3, 5, "Generating audio (this may take 1-3 minutes)...")
+
+            gen_start = time.time()
+            print(f"🔄 Generating audio tokens...")
+
+            results = list(self._model.generate(**gen_kwargs))
+
+            gen_time = time.time() - gen_start
+            print(f"⏱️  Generation completed in {gen_time:.2f}s")
+
+            if not results:
+                raise RuntimeError("Model did not generate any audio")
+
+            # Get the first result (for simple cases)
+            result = results[0]
+            audio_data = np.array(result.audio)
+
+            if progress_callback:
+                progress_callback(4, 5, "Processing audio...")
 
             # Validate audio data
             if audio_data is None or len(audio_data) == 0:
-                raise RuntimeError(f"TTS generation produced empty audio data")
+                raise RuntimeError("Generated audio is empty")
 
             # Ensure mono
             if len(audio_data.shape) > 1:
                 audio_data = audio_data[:, 0]
 
             # Convert to float32 if needed
-            if audio_data.dtype == np.int16:
-                audio_data = audio_data.astype(np.float32) / 32768.0
+            if audio_data.dtype != np.float32:
+                audio_data = audio_data.astype(np.float32)
+
+            if progress_callback:
+                progress_callback(5, 5, "Complete")
+
+            total_time = time.time() - start_time
+            print(f"✅ Total generation time: {total_time:.2f}s")
+            print(f"📊 Audio duration: {result.audio_duration}")
+            print(f"⚡ Real-time factor: {result.real_time_factor:.2f}x")
 
             return audio_data
 
         except Exception as e:
-            # Now we get proper Python exceptions instead of parsing subprocess output
+            elapsed = time.time() - start_time
+            print(f"❌ Generation failed after {elapsed:.2f}s")
             raise RuntimeError(f"TTS generation failed: {str(e)}") from e
-        finally:
-            # Clean up temporary directory
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def list_available_models(self) -> list[str]:
         """List available MLX models"""

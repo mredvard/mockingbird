@@ -37,7 +37,8 @@ class TTSService:
         self,
         text: str,
         ref_audio_path: Path,
-        ref_text: str
+        ref_text: str,
+        progress_callback=None
     ) -> np.ndarray:
         """
         Generate TTS with voice cloning
@@ -46,6 +47,8 @@ class TTSService:
             text: Text to synthesize
             ref_audio_path: Path to reference audio file
             ref_text: Transcription of reference audio
+            progress_callback: Optional callback function(current, total, message)
+                              for progress updates
 
         Returns:
             Generated audio as numpy array
@@ -61,7 +64,8 @@ class TTSService:
         audio_data = self.backend.generate(
             text=text,
             ref_audio_path=str(ref_audio_path),
-            ref_text=ref_text
+            ref_text=ref_text,
+            progress_callback=progress_callback
         )
 
         print("TTS generation complete")

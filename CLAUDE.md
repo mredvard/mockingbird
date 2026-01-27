@@ -5,42 +5,67 @@ TTS Voice Cloning Web Application with MLX (Apple Silicon) and PyTorch (NVIDIA G
 
 ## Recent Work Completed
 
-### 1. MLX Backend Refactored to Use Python API (2026-01-27)
-**Migration from subprocess to direct Python imports**
+### 1. MLX Backend Refactored to Use Python API + Progress Tracking (2026-01-27)
+**Migration from subprocess to direct Python imports with detailed timing and progress tracking**
 
 **Problem**: The MLX backend was calling `python -m mlx_audio.tts.generate` via subprocess, which had several limitations:
 - High overhead from spawning processes
 - Poor error handling (parsing stderr)
-- No real-time progress tracking capability
+- **No visibility into generation progress** (appeared "frozen" for 40+ seconds)
 - Model loaded/unloaded on every generation
 - Difficult to debug
 
-**Solution**: Refactored to use `mlx_audio` Python API directly:
+**Solution**: Refactored to use `mlx_audio` Python API directly with progress callbacks and detailed timing:
 
 ```python
 from mlx_audio.tts import load_model
-from mlx_audio.tts.generate import generate_audio
 import mlx.core as mx
+
+# Load model once, reuse for multiple generations
+model = load_model(model_path=model_name)
+
+# Call model.generate() directly with progress callback
+results = list(model.generate(text=text, ref_audio=ref_audio, ref_text=ref_text, ...))
 ```
 
 **Key Improvements**:
-1. **Model Persistence**: Model stays loaded in memory between generations (~10% faster)
-2. **Better Performance**: No subprocess overhead
-3. **Direct Error Handling**: Python exceptions instead of parsing subprocess output
-4. **Better Resource Management**: Added `unload_model()` method with `mx.clear_cache()`
-5. **Cleaner Code**: Direct function calls instead of command-line argument building
-6. **Debugging**: Full access to internal state and variables
+1. **Model Persistence**: Model stays loaded in memory between generations
+2. **Progress Tracking**: Progress callback support for real-time updates during generation
+3. **Detailed Timing**: Logs timing for each stage with emoji indicators
+4. **Direct Error Handling**: Python exceptions with full stack traces
+5. **Better Resource Management**: Added `unload_model()` method with `mx.clear_cache()`
+6. **Observability**: Clear visibility into what's happening during the 40+ second generation
 
-**Changes in [`backend/app/models/mlx_backend.py`](backend/app/models/mlx_backend.py)**:
-- Removed `subprocess` dependency
-- Added `_model` instance variable to persist loaded model
-- Replaced subprocess call with direct `generate_audio()` function call
-- Added `unload_model()` method for explicit memory cleanup
-- Improved error messages with Python exception chaining
+**Performance Metrics** (measured on Apple Silicon):
+- **Reference audio loading**: ~0.04s
+- **Audio generation**: ~40s (bottleneck - this is the MLX model inference time)
+- **Audio processing**: ~0.04s
+- **Total**: ~45s for 3.6s of audio
+- **Real-time factor**: 0.09x (11 seconds to generate 1 second of audio)
+
+**Changes Made**:
+
+1. **`backend/app/models/mlx_backend.py`**:
+   - Removed subprocess/tempfile/generate_audio wrapper
+   - Added `_model` instance variable to persist loaded model
+   - Replaced subprocess with direct `model.generate()` call
+   - Added `progress_callback` parameter for real-time progress updates
+   - Added detailed timing logs: 🎵 🔄 ⏱️ ✅ ❌ 📊 ⚡
+   - Added `unload_model()` for memory cleanup
+
+2. **`backend/app/services/tts.py`**:
+   - Added `progress_callback` parameter to pass through to backend
+
+3. **`backend/app/routes/generation.py`**:
+   - Added timing logs to background generation task
+   - Implemented `generation_progress()` callback to update ProgressTracker
+   - Added breakdown of initialization, generation, and processing times
 
 **Testing**:
-- Manual tests pass (sync and async)
-- Integration tests pass (except one non-critical progress tracking test that's now too fast)
+- ✅ Synchronous generation: 41-47s for short Spanish text
+- ✅ Async with progress: Can observe intermediate states (10% → 54% → 100%)
+- ✅ Server logs show detailed timing breakdown
+- ✅ Progress tracking now captures real generation stages
 
 ### 2. Backend Testing Infrastructure (2026-01-27)
 Created comprehensive test suite for the FastAPI backend:

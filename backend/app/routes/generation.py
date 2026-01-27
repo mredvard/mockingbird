@@ -18,7 +18,11 @@ def _generate_speech_background(
     ref_audio_path,
     ref_text: str
 ):
-    """Background task for TTS generation."""
+    """Background task for TTS generation with detailed progress tracking."""
+    import time
+
+    start_time = time.time()
+
     try:
         # Update progress: Initializing
         progress_tracker.update_progress(
@@ -29,25 +33,45 @@ def _generate_speech_background(
         )
 
         # Initialize TTS service
+        init_start = time.time()
         if model:
             tts_service.initialize(model)
         else:
             tts_service.initialize()
+
+        init_time = time.time() - init_start
+        print(f"⏱️  Model initialization: {init_time:.2f}s")
 
         # Update progress: Generating
         progress_tracker.update_progress(
             task_id,
             status=TaskStatus.GENERATING,
             progress=30,
-            message="Generating speech..."
+            message="Generating speech (this may take 1-3 minutes)..."
         )
 
-        # Generate TTS
+        # Define progress callback to update during generation
+        def generation_progress(current, total, message):
+            """Callback for generation progress updates."""
+            # Map generation progress (1-5) to our progress range (30-70%)
+            progress_value = 30 + int((current / total) * 40)
+            progress_tracker.update_progress(
+                task_id,
+                status=TaskStatus.GENERATING,
+                progress=progress_value,
+                message=message
+            )
+
+        # Generate TTS with progress callback
+        gen_start = time.time()
         audio_data = tts_service.generate(
             text=text,
             ref_audio_path=ref_audio_path,
-            ref_text=ref_text
+            ref_text=ref_text,
+            progress_callback=generation_progress
         )
+        gen_time = time.time() - gen_start
+        print(f"⏱️  Audio generation: {gen_time:.2f}s")
 
         # Validate audio data
         if audio_data is None or len(audio_data) == 0:
@@ -62,6 +86,7 @@ def _generate_speech_background(
         )
 
         # Convert to WAV bytes
+        proc_start = time.time()
         audio_bytes = audio_service.audio_to_wav_bytes(audio_data)
 
         # Validate converted bytes
@@ -70,6 +95,14 @@ def _generate_speech_background(
 
         # Calculate duration
         duration = audio_service.get_audio_duration(audio_data)
+
+        # Update progress: Saving
+        progress_tracker.update_progress(
+            task_id,
+            status=TaskStatus.PROCESSING,
+            progress=90,
+            message="Saving audio file..."
+        )
 
         # Save generation
         generation_metadata = storage_service.create_generation(
@@ -80,13 +113,21 @@ def _generate_speech_background(
             duration=duration
         )
 
+        proc_time = time.time() - proc_start
+        print(f"⏱️  Audio processing: {proc_time:.2f}s")
+
         # Add audio URL
         generation_metadata["audio_url"] = f"/api/generations/{generation_metadata['id']}/audio"
+
+        total_time = time.time() - start_time
+        print(f"✅ Total background task time: {total_time:.2f}s")
 
         # Complete task
         progress_tracker.complete_task(task_id, generation_metadata)
 
     except Exception as e:
+        elapsed = time.time() - start_time
+        print(f"❌ Background task failed after {elapsed:.2f}s: {str(e)}")
         progress_tracker.fail_task(task_id, str(e))
 
 
