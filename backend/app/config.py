@@ -31,14 +31,15 @@ class Config:
     DTYPE = "int16"
 
     # Model configurations
+    # The first model in each list is the default
     MLX_MODELS = [
+        "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16",  # Default: 1.7B model
         "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
-        "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16",
     ]
 
     PYTORCH_MODELS = [
+        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",  # Default: 1.7B model
         "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
     ]
 
     # Get available models based on backend

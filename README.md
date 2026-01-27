@@ -18,7 +18,7 @@ The application consists of:
 
 - **Backend**: FastAPI-based REST API with dual backend support (MLX/PyTorch)
 - **Frontend**: React + TypeScript + Vite with Tailwind CSS
-- **TTS Models**: Qwen3-TTS (0.6B and 1.7B variants)
+- **TTS Models**: Qwen3-TTS (1.7B default, 0.6B also available)
 - **STT Model**: Whisper Large v3 Turbo
 
 ## Prerequisites
@@ -145,6 +145,83 @@ uv run python -m mlx_audio.tts.generate \
   --play
 ```
 
+## Progress Tracking for TTS Generation
+
+TTS generation can take time, especially for longer texts. The API provides progress tracking for async generation:
+
+### Using Async Generation with Progress
+
+1. **Start Generation** (returns immediately):
+```bash
+curl -X POST http://localhost:8000/api/generations/async \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Your text to generate",
+    "voice_id": "your-voice-id"
+  }'
+```
+
+Response:
+```json
+{
+  "task_id": "abc-123-def",
+  "message": "Generation started",
+  "status_url": "/api/generations/tasks/abc-123-def"
+}
+```
+
+2. **Check Progress** (poll periodically):
+```bash
+curl http://localhost:8000/api/generations/tasks/abc-123-def
+```
+
+Response (in progress):
+```json
+{
+  "id": "abc-123-def",
+  "status": "generating",
+  "progress": 45,
+  "message": "Generating speech...",
+  "created_at": "2026-01-27T12:00:00",
+  "updated_at": "2026-01-27T12:00:15",
+  "result": null,
+  "error": null
+}
+```
+
+Response (completed):
+```json
+{
+  "id": "abc-123-def",
+  "status": "completed",
+  "progress": 100,
+  "message": "Completed successfully",
+  "result": {
+    "id": "gen-456",
+    "text": "Your text to generate",
+    "voice_id": "your-voice-id",
+    "audio_url": "/api/generations/gen-456/audio",
+    ...
+  }
+}
+```
+
+### Status Values
+- `pending` - Task queued but not started
+- `initializing` - Loading TTS model (progress: ~10%)
+- `generating` - Generating speech (progress: ~30-70%)
+- `processing` - Post-processing audio (progress: ~80-90%)
+- `completed` - Generation finished (progress: 100%)
+- `failed` - Generation failed (check `error` field)
+
+### Synchronous Generation (Original)
+For immediate generation (blocks until complete):
+```bash
+curl -X POST http://localhost:8000/api/generations \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Your text", "voice_id": "your-voice-id"}'
+```
+
 ## API Endpoints
 
 ### Voices
@@ -156,7 +233,10 @@ uv run python -m mlx_audio.tts.generate \
 - `DELETE /api/voices/{id}` - Delete voice sample
 
 ### Generations
-- `POST /api/generations` - Generate TTS with voice cloning
+- `POST /api/generations` - Generate TTS with voice cloning (synchronous)
+- `POST /api/generations/async` - Generate TTS asynchronously with progress tracking
+- `GET /api/generations/tasks/{task_id}` - Get generation task status and progress
+- `DELETE /api/generations/tasks/{task_id}` - Remove task from tracking
 - `GET /api/generations` - List all generations
 - `GET /api/generations/{id}` - Get generation details
 - `GET /api/generations/{id}/audio` - Download generated audio
@@ -172,12 +252,12 @@ uv run python -m mlx_audio.tts.generate \
 ## Available Models
 
 ### MLX Backend (Mac)
+- `mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16` (default)
 - `mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16`
-- `mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16`
 
 ### PyTorch Backend (Jetson)
+- `Qwen/Qwen3-TTS-12Hz-1.7B-Base` (default)
 - `Qwen/Qwen3-TTS-12Hz-0.6B-Base`
-- `Qwen/Qwen3-TTS-12Hz-1.7B-Base`
 
 Note: PyTorch backend implementation is pending. Currently only MLX backend is fully functional.
 
@@ -258,9 +338,26 @@ uv run pytest -v
 # Run specific test file
 uv run pytest tests/test_voice_endpoints.py
 
+# Skip integration tests (fast unit tests only)
+uv run pytest -m "not integration"
+
+# Run ONLY integration tests (requires model, takes several minutes)
+uv run pytest -m integration -v
+
+# Run integration tests with detailed output
+uv run pytest tests/test_generation_integration.py -m integration -v -s
+
 # Run tests with coverage (install pytest-cov first)
 uv run pytest --cov=backend
 ```
+
+**Test Types:**
+- **Unit Tests** (41 tests, ~3 seconds): Fast tests for API endpoints, validation, error handling
+- **Integration Tests** (4 tests, ~5-15 minutes): Actual TTS generation with model download
+  - `test_sync_generation_short_spanish_text` - Tests synchronous generation
+  - `test_async_generation_with_progress_tracking` - Tests async with polling
+  - `test_generation_progress_stages` - Verifies all progress stages
+  - `test_multiple_short_generations` - Tests sequential generations
 
 ### Frontend Development
 ```bash

@@ -1,5 +1,6 @@
 from .voice import Voice, VoiceCreate, VoiceWithTranscription, TranscriptionUpdate
 from .generation import Generation, GenerationRequest, BackendInfo
+from .task import TaskStatus, GenerationTaskResponse
 
 __all__ = [
     "Voice",
@@ -8,5 +9,7 @@ __all__ = [
     "TranscriptionUpdate",
     "Generation",
     "GenerationRequest",
-    "BackendInfo"
+    "BackendInfo",
+    "TaskStatus",
+    "GenerationTaskResponse"
 ]

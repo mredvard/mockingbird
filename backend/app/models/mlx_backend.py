@@ -45,9 +45,10 @@ class MLXBackend(TTSBackend):
         if not self._current_model:
             raise RuntimeError("No model loaded. Call load_model() first.")
 
-        # Create temporary file for output
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-            output_path = tmp_file.name
+        # Create temporary directory for output
+        # mlx_audio CLI saves files as output_dir/audio_000.wav, audio_001.wav, etc.
+        temp_dir = tempfile.mkdtemp(prefix="tts_")
+        output_dir = Path(temp_dir)
 
         try:
             # Build command
@@ -57,7 +58,7 @@ class MLXBackend(TTSBackend):
                 "--text", text,
                 "--ref_audio", ref_audio_path,
                 "--ref_text", ref_text,
-                "--output", output_path,
+                "--output", str(output_dir),
             ]
 
             # Run generation
@@ -68,8 +69,23 @@ class MLXBackend(TTSBackend):
                 check=True
             )
 
+            # Find the generated audio file (mlx_audio saves as audio_000.wav, audio_001.wav, etc.)
+            audio_files = list(output_dir.glob("audio_*.wav"))
+            if not audio_files:
+                raise RuntimeError(f"TTS subprocess did not create any audio files in: {output_dir}")
+
+            # Use the first audio file
+            output_path = audio_files[0]
+
+            if output_path.stat().st_size == 0:
+                raise RuntimeError(f"TTS subprocess created empty output file: {output_path}")
+
             # Read the generated audio
-            sample_rate, audio_data = wavfile.read(output_path)
+            sample_rate, audio_data = wavfile.read(str(output_path))
+
+            # Validate audio data
+            if audio_data is None or len(audio_data) == 0:
+                raise RuntimeError(f"TTS subprocess generated empty audio data")
 
             # Ensure mono
             if len(audio_data.shape) > 1:
@@ -82,10 +98,16 @@ class MLXBackend(TTSBackend):
             return audio_data
 
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"TTS generation failed: {e.stderr}")
+            error_msg = f"TTS generation subprocess failed with exit code {e.returncode}"
+            if e.stdout:
+                error_msg += f"\nStdout: {e.stdout}"
+            if e.stderr:
+                error_msg += f"\nStderr: {e.stderr}"
+            raise RuntimeError(error_msg)
         finally:
-            # Clean up temporary file
-            Path(output_path).unlink(missing_ok=True)
+            # Clean up temporary directory
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def list_available_models(self) -> list[str]:
         """List available MLX models"""
