@@ -42,6 +42,18 @@ uv run python -m mlx_audio.tts.generate \
   --play
 ```
 
+### Speech-to-text
+
+Transcribe a recording:
+
+```bash
+# Transcribe voice_sample.wav (default)
+uv run python transcribe.py
+
+# Transcribe a specific file
+uv run python transcribe.py my_recording.wav
+```
+
 ## Models
 
 - `mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16` - Qwen3 TTS (voice cloning supported)
