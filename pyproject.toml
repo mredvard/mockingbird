@@ -1,13 +1,29 @@
 [project]
 name = "tts"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "TTS Web Application with Voice Cloning"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    "pydantic>=2.10.0",
+    "sounddevice>=0.5.3",
+    "scipy>=1.17.0",
+    "numpy>=2.3.0",
+]
+
+[project.optional-dependencies]
+mlx = [
     "mlx-audio>=0.3.0",
     "mlx-whisper",
     "tiktoken",
+]
+pytorch = [
+    "torch>=2.5.0",
+    "torchaudio>=2.5.0",
+    "transformers>=4.50.0",
 ]
 
 [tool.uv]
