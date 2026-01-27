@@ -3,15 +3,20 @@ import type {
   VoiceWithTranscription,
   Generation,
   GenerationRequest,
+  GenerationTaskResponse,
+  TaskStatus,
   BackendInfo,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+
+  constructor(status: number, message: string) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
   }
 }
 
@@ -102,6 +107,29 @@ export const generationApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
+    });
+    return handleResponse(response);
+  },
+
+  async createAsync(request: GenerationRequest): Promise<GenerationTaskResponse> {
+    const response = await fetch(`${API_BASE}/api/generations/async`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+    return handleResponse(response);
+  },
+
+  async getTaskStatus(taskId: string): Promise<TaskStatus> {
+    const response = await fetch(`${API_BASE}/api/generations/tasks/${taskId}`);
+    return handleResponse(response);
+  },
+
+  async deleteTask(taskId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/api/generations/tasks/${taskId}`, {
+      method: 'DELETE',
     });
     return handleResponse(response);
   },

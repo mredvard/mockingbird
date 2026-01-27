@@ -40,6 +40,24 @@ export interface BackendInfo {
   sample_rate: number;
 }
 
+// Task and progress types
+export interface TaskStatus {
+  id: string;
+  status: 'pending' | 'initializing' | 'generating' | 'processing' | 'completed' | 'failed';
+  progress: number; // 0-100
+  message: string;
+  created_at: string;
+  updated_at: string;
+  result?: Generation | null;
+  error?: string | null;
+}
+
+export interface GenerationTaskResponse {
+  task_id: string;
+  message: string;
+  status_url: string;
+}
+
 // API error response
 export interface ApiError {
   detail: string;

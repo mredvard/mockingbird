@@ -259,16 +259,118 @@ uv run python test_tts_direct.py
 - React + TypeScript + Vite
 - Tailwind CSS
 
-## Next Steps / TODO
+## Frontend Implementation (2026-01-27)
+**Complete React frontend with full TTS functionality**
 
-- [ ] Fix test isolation issue (tests seeing manual test data). Test data should go to a different folder and not interfere with manual or real data.
+### Files Created
+
+#### UI Components (`frontend/src/components/ui/`)
+- **Button.tsx** - Configurable button (primary, secondary, text, danger variants)
+- **Card.tsx** - Card container with Header, Body, Footer sub-components
+- **Input.tsx** - Text input and textarea with labels, errors, helper text
+- **Select.tsx** - Dropdown selector with options
+- **Modal.tsx** - Modal dialog with backdrop, customizable sizes
+- **AudioPlayer.tsx** - Full-featured audio player with seek, volume controls
+
+#### Voice Components (`frontend/src/components/voice/`)
+- **VoiceRecorder.tsx** - Browser MediaRecorder integration with pause/resume
+- **VoiceCard.tsx** - Display voice profile with playback and actions
+- **VoiceList.tsx** - Grid display of voice profiles with loading states
+
+#### Generation Components (`frontend/src/components/generation/`)
+- **TextInput.tsx** - Text area for TTS input with character count
+- **ModelSelector.tsx** - Model selection dropdown with info
+- **GenerationCard.tsx** - Display generated audio with playback/download
+- **GenerationList.tsx** - Grid of generation history
+
+#### Custom Hooks (`frontend/src/hooks/`)
+- **useVoices.ts** - React Query hooks for voice CRUD operations
+- **useGeneration.ts** - Hooks for sync/async TTS generation with progress
+- **useModels.ts** - Hooks for backend info and model list
+
+#### Pages (`frontend/src/pages/`)
+- **Home.tsx** - Dashboard with stats, getting started guide, features
+- **VoiceLibrary.tsx** - Voice management with recording modal
+- **Generate.tsx** - TTS generation with voice selection, text input, progress tracking
+
+#### App Structure
+- **App.tsx** - React Router setup, navigation, layout with header/footer
+- **types/index.ts** - Updated with async generation types (TaskStatus, GenerationTaskResponse)
+- **services/api.ts** - Updated with async endpoints (createAsync, getTaskStatus, deleteTask)
+
+### Features Implemented
+
+1. **Voice Recording**
+   - Browser microphone access
+   - Real-time recording with timer
+   - Pause/resume functionality
+   - Waveform visualization placeholder
+   - Auto-transcription on upload
+
+2. **Voice Library**
+   - Grid view of all voice profiles
+   - Audio playback for each voice
+   - Delete voice profiles
+   - Voice selection for TTS
+
+3. **TTS Generation**
+   - Voice profile selection
+   - Text input with character limits
+   - Model selection (0.6B/1.7B)
+   - **Async generation with progress tracking**
+   - Real-time progress bar (0-100%)
+   - Status messages during generation
+   - Success/error notifications
+
+4. **Audio Playback**
+   - Play/pause controls
+   - Seek slider
+   - Volume control with slider
+   - Time display (current/duration)
+
+5. **Generation History**
+   - List all generated audio
+   - Replay previous generations
+   - Download WAV files
+   - Delete generations
+
+6. **Responsive Design**
+   - Mobile-first approach
+   - Grid layouts for cards
+   - Sticky sidebar on Generate page
+   - Navigation with active states
+
+### Technical Stack
+
+- **React 19.2** with TypeScript
+- **React Router DOM 7.13** for navigation
+- **React Query 5.90** for data fetching & caching
+- **Tailwind CSS 4.1** for styling
+- **Vite 7.2** for build tooling
+
+### Running the App
+
+```bash
+# Backend (Terminal 1)
+uv run python -m backend.app.main
+
+# Frontend (Terminal 2)
+cd frontend
+npm run dev
+```
+
+Then visit: http://localhost:5173
+
+### Next Steps / TODO
+
+- [ ] Fix test isolation issue (tests seeing manual test data)
 - [ ] Improve progress tracking tests to better observe intermediate states
 - [ ] Implement PyTorch backend for Jetson/NVIDIA platforms
-- [ ] Add generation queue management
-- [ ] Add voice profile management UI improvements
-- [ ] Add audio playback controls in frontend
 - [ ] Add export/import for voice profiles
-- [ ] Add model selection in frontend UI
+- [✅] ~~Add voice profile management UI~~ - COMPLETED
+- [✅] ~~Add audio playback controls in frontend~~ - COMPLETED
+- [✅] ~~Add model selection in frontend UI~~ - COMPLETED
+- [✅] ~~Add async generation with progress tracking~~ - COMPLETED
 
 ## Debugging Tips
 
@@ -293,4 +395,4 @@ uv run python test_tts_direct.py
 ---
 
 **Last Updated**: 2026-01-27
-**Claude Session**: Fixed MLX backend output path handling, implemented progress tracking, created comprehensive test suite
+**Claude Session**: Implemented complete React frontend with voice recording, TTS generation with async progress tracking, and full audio playback
