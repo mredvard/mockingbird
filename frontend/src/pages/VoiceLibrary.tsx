@@ -4,14 +4,18 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { VoiceRecorder } from '../components/voice/VoiceRecorder';
 import { VoiceList } from '../components/voice/VoiceList';
-import { useVoices } from '../hooks/useVoices';
+import { useVoices, useVoice } from '../hooks/useVoices';
 
 export function VoiceLibrary() {
   const { voices, isLoading, createVoice, deleteVoice, isCreating } = useVoices();
   const [showRecordModal, setShowRecordModal] = useState(false);
+  const [showTranscriptionModal, setShowTranscriptionModal] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [voiceName, setVoiceName] = useState('');
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
+
+  const { voice: selectedVoice } = useVoice(selectedVoiceId || undefined);
 
   const handleRecordingComplete = (blob: Blob, duration: number) => {
     setRecordedAudio(blob);
@@ -58,6 +62,16 @@ export function VoiceLibrary() {
     setRecordingDuration(0);
   };
 
+  const handleViewTranscription = (voiceId: string) => {
+    setSelectedVoiceId(voiceId);
+    setShowTranscriptionModal(true);
+  };
+
+  const handleCloseTranscriptionModal = () => {
+    setShowTranscriptionModal(false);
+    setSelectedVoiceId(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -81,6 +95,7 @@ export function VoiceLibrary() {
         voices={voices}
         loading={isLoading}
         onDelete={handleDeleteVoice}
+        onViewTranscription={handleViewTranscription}
       />
 
       {/* Record Modal */}
@@ -150,6 +165,63 @@ export function VoiceLibrary() {
                 <span>
                   Recording complete ({recordingDuration.toFixed(1)}s). Enter a name and click "Save Voice".
                 </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Transcription Viewer Modal */}
+      <Modal
+        open={showTranscriptionModal}
+        onClose={handleCloseTranscriptionModal}
+        title={selectedVoice ? `Transcription: ${selectedVoice.name}` : 'Transcription'}
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={handleCloseTranscriptionModal}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          {selectedVoice?.transcription ? (
+            <>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {selectedVoice.transcription}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+                <span>{selectedVoice.transcription.length} characters</span>
+                <span>
+                  {selectedVoice.transcription.split(/\s+/).filter(w => w.length > 0).length} words
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <p className="mt-2 text-sm text-gray-500">Loading transcription...</p>
               </div>
             </div>
           )}

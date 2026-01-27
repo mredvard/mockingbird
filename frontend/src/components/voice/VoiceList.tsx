@@ -6,6 +6,7 @@ interface VoiceListProps {
   selectedVoiceId?: string;
   onSelect?: (voice: Voice) => void;
   onDelete?: (voiceId: string) => void;
+  onViewTranscription?: (voiceId: string) => void;
   loading?: boolean;
   compact?: boolean;
 }
@@ -15,6 +16,7 @@ export function VoiceList({
   selectedVoiceId,
   onSelect,
   onDelete,
+  onViewTranscription,
   loading = false,
   compact = false,
 }: VoiceListProps) {
@@ -72,6 +74,7 @@ export function VoiceList({
           selected={voice.id === selectedVoiceId}
           onSelect={() => onSelect?.(voice)}
           onDelete={() => onDelete?.(voice.id)}
+          onViewTranscription={() => onViewTranscription?.(voice.id)}
         />
       ))}
     </div>
