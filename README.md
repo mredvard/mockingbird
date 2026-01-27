@@ -248,8 +248,18 @@ backend/data/
 # Run with auto-reload
 uv run uvicorn backend.app.main:app --reload
 
-# Run tests (when implemented)
+# Run tests
+uv sync --extra test --extra mlx
 uv run pytest
+
+# Run tests with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_voice_endpoints.py
+
+# Run tests with coverage (install pytest-cov first)
+uv run pytest --cov=backend
 ```
 
 ### Frontend Development
@@ -297,6 +307,12 @@ npm run preview
 - Frontend project setup with Vite + React + TypeScript + Tailwind CSS
 - TypeScript types for API integration
 - API service layer
+- Comprehensive test suite (41 passing tests):
+  - Voice endpoint tests (CRUD operations, transcription, audio download)
+  - Generation endpoint tests (validation, error handling)
+  - Models and backend info tests
+  - Health check and API documentation tests
+  - CORS and error handling tests
 
 ### 🚧 In Progress / TODO
 - Frontend UI components (buttons, cards, inputs, audio player)
