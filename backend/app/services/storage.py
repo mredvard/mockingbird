@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, List
 import shutil
 
 from ..config import config
+from ..utils.audio import convert_to_wav, get_audio_duration
 
 
 class StorageService:
@@ -25,7 +26,7 @@ class StorageService:
         Create new voice sample with metadata
 
         Args:
-            audio_data: Raw audio file bytes (WAV format)
+            audio_data: Raw audio file bytes (any format - will be converted to WAV)
             name: Human-readable name for the voice
             transcription: Optional transcription text
 
@@ -36,9 +37,23 @@ class StorageService:
         voice_dir = self.voices_dir / voice_id
         voice_dir.mkdir(parents=True, exist_ok=True)
 
+        # Convert audio to WAV format (handles WebM, MP3, etc.)
+        print(f"Converting audio to WAV format (sample rate: {config.SAMPLE_RATE})")
+        try:
+            wav_data = convert_to_wav(audio_data, target_sample_rate=config.SAMPLE_RATE)
+        except Exception as e:
+            print(f"Audio conversion failed: {e}")
+            # If conversion fails, save as-is and hope it's already WAV
+            wav_data = audio_data
+
         # Save audio
         audio_path = voice_dir / "audio.wav"
-        audio_path.write_bytes(audio_data)
+        audio_path.write_bytes(wav_data)
+
+        # Calculate duration
+        duration = get_audio_duration(wav_data)
+        if duration:
+            print(f"Audio duration: {duration:.2f}s")
 
         # Save transcription if available
         has_transcription = False
@@ -46,10 +61,6 @@ class StorageService:
             trans_path = voice_dir / "transcription.txt"
             trans_path.write_text(transcription, encoding="utf-8")
             has_transcription = True
-
-        # Calculate duration (simple approach using file size / sample rate)
-        # For accurate duration, would need to parse WAV header
-        duration = None  # TODO: Calculate actual duration
 
         # Save metadata
         metadata = {

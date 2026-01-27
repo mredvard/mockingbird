@@ -10,6 +10,7 @@ dependencies = [
     "python-multipart>=0.0.12",
     "pydantic>=2.10.0",
     "sounddevice>=0.5.3",
+    "soundfile>=0.12.1",
     "scipy>=1.17.0",
     "numpy>=2.3.0",
     "requests>=2.31.0",

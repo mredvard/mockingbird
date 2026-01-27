@@ -1901,6 +1901,7 @@ dependencies = [
     { name = "requests" },
     { name = "scipy" },
     { name = "sounddevice" },
+    { name = "soundfile" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1935,6 +1936,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0" },
     { name = "scipy", specifier = ">=1.17.0" },
     { name = "sounddevice", specifier = ">=0.5.3" },
+    { name = "soundfile", specifier = ">=0.12.1" },
     { name = "tiktoken", marker = "extra == 'mlx'" },
     { name = "torch", marker = "extra == 'pytorch'", specifier = ">=2.5.0" },
     { name = "torchaudio", marker = "extra == 'pytorch'", specifier = ">=2.5.0" },

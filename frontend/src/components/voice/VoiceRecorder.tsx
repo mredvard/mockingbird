@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 
 interface VoiceRecorderProps {
   onRecordingComplete: (blob: Blob, duration: number) => void;
@@ -12,6 +13,8 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -20,6 +23,26 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
   const pausedTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    // Enumerate audio input devices
+    const getAudioDevices = async () => {
+      try {
+        // Request permission first
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        setAudioDevices(audioInputs);
+
+        // Set default device if available
+        if (audioInputs.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(audioInputs[0].deviceId);
+        }
+      } catch (err) {
+        console.error('Error enumerating devices:', err);
+      }
+    };
+
+    getAudioDevices();
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -28,12 +51,17 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
         URL.revokeObjectURL(audioURL);
       }
     };
-  }, [audioURL]);
+  }, [audioURL, selectedDeviceId]);
 
   const startRecording = async () => {
     try {
       setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const constraints: MediaStreamConstraints = {
+        audio: selectedDeviceId
+          ? { deviceId: { exact: selectedDeviceId } }
+          : true
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm',
@@ -139,6 +167,20 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
 
   return (
     <div className="space-y-4">
+      {/* Microphone Selector */}
+      {!isRecording && !audioURL && audioDevices.length > 0 && (
+        <Select
+          label="Microphone"
+          value={selectedDeviceId}
+          onChange={(e) => setSelectedDeviceId(e.target.value)}
+          options={audioDevices.map(device => ({
+            value: device.deviceId,
+            label: device.label || `Microphone ${audioDevices.indexOf(device) + 1}`
+          }))}
+          helperText="Select the microphone to use for recording"
+        />
+      )}
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
