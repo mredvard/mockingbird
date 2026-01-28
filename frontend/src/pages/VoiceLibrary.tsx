@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { VoiceRecorder } from '../components/voice/VoiceRecorder';
 import { VoiceList } from '../components/voice/VoiceList';
 import { useVoices, useVoice } from '../hooks/useVoices';
+import type { Voice } from '../types';
 
 export function VoiceLibrary() {
+  const navigate = useNavigate();
   const { voices, isLoading, createVoice, deleteVoice, isCreating } = useVoices();
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(false);
@@ -16,6 +19,11 @@ export function VoiceLibrary() {
   const [recordingDuration, setRecordingDuration] = useState(0);
 
   const { voice: selectedVoice } = useVoice(selectedVoiceId || undefined);
+
+  const handleSelectVoice = (voice: Voice) => {
+    // Navigate to Generate page with the selected voice
+    navigate('/generate', { state: { selectedVoice: voice } });
+  };
 
   const handleRecordingComplete = (blob: Blob, duration: number) => {
     setRecordedAudio(blob);
@@ -94,6 +102,7 @@ export function VoiceLibrary() {
       <VoiceList
         voices={voices}
         loading={isLoading}
+        onSelect={handleSelectVoice}
         onDelete={handleDeleteVoice}
         onViewTranscription={handleViewTranscription}
       />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { TextInput } from '../components/generation/TextInput';
@@ -11,6 +12,7 @@ import { useModels } from '../hooks/useModels';
 import type { Voice } from '../types';
 
 export function Generate() {
+  const location = useLocation();
   const { voices, isLoading: isLoadingVoices } = useVoices();
   const { generations, deleteGeneration } = useGenerations();
   const { models, currentModel } = useModels();
@@ -28,6 +30,16 @@ export function Generate() {
   const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
   const [text, setText] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('');
+
+  // Set voice from navigation state if provided
+  useEffect(() => {
+    const state = location.state as { selectedVoice?: Voice };
+    if (state?.selectedVoice) {
+      setSelectedVoice(state.selectedVoice);
+      // Clear the state after using it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Set default model when available
   useEffect(() => {
