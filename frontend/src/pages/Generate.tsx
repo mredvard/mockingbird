@@ -13,7 +13,7 @@ import type { Voice } from '../types';
 
 export function Generate() {
   const location = useLocation();
-  const { voices, isLoading: isLoadingVoices } = useVoices();
+  const { voices, isLoading: isLoadingVoices, deleteVoice } = useVoices();
   const { generations, deleteGeneration } = useGenerations();
   const { models, currentModel } = useModels();
   const {
@@ -96,6 +96,19 @@ export function Generate() {
     }
   };
 
+  const handleDeleteVoice = async (id: string) => {
+    try {
+      await deleteVoice(id);
+      // Clear selection if the deleted voice was selected
+      if (selectedVoice?.id === id) {
+        setSelectedVoice(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete voice:', error);
+      alert('Failed to delete voice. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -128,6 +141,7 @@ export function Generate() {
                   loading={isLoadingVoices}
                   selectedVoiceId={selectedVoice?.id}
                   onSelect={setSelectedVoice}
+                  onDelete={handleDeleteVoice}
                   compact={true}
                 />
               )}

@@ -72,9 +72,9 @@ export function VoiceList({
           key={voice.id}
           voice={voice}
           selected={voice.id === selectedVoiceId}
-          onSelect={() => onSelect?.(voice)}
-          onDelete={() => onDelete?.(voice.id)}
-          onViewTranscription={() => onViewTranscription?.(voice.id)}
+          onSelect={onSelect ? () => onSelect(voice) : undefined}
+          onDelete={onDelete ? () => onDelete(voice.id) : undefined}
+          onViewTranscription={onViewTranscription ? () => onViewTranscription(voice.id) : undefined}
         />
       ))}
     </div>
