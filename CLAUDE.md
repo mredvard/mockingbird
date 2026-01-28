@@ -273,7 +273,7 @@ uv run python test_tts_direct.py
 - **AudioPlayer.tsx** - Full-featured audio player with seek, volume controls
 
 #### Voice Components (`frontend/src/components/voice/`)
-- **VoiceRecorder.tsx** - Browser MediaRecorder integration with pause/resume
+- **VoiceRecorder.tsx** - Browser MediaRecorder integration with pause/resume + file upload support (WAV, WebM, OGG, MP3)
 - **VoiceCard.tsx** - Display voice profile with playback and actions
 - **VoiceList.tsx** - Grid display of voice profiles with loading states
 
@@ -300,11 +300,14 @@ uv run python test_tts_direct.py
 
 ### Features Implemented
 
-1. **Voice Recording**
+1. **Voice Recording & Upload**
    - Browser microphone access
    - Real-time recording with timer
    - Pause/resume functionality
    - Waveform visualization placeholder
+   - **File upload support (WAV, WebM, OGG, MP3, M4A)**
+   - Tab-based UI to switch between recording and uploading
+   - File validation (format and size up to 50MB)
    - Auto-transcription on upload
 
 2. **Voice Library**

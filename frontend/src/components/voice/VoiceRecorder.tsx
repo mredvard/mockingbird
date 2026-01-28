@@ -15,12 +15,15 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
   const [error, setError] = useState<string | null>(null);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<'record' | 'upload'>('record');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const pausedTimeRef = useRef<number>(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     // Enumerate audio input devices
@@ -157,6 +160,85 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
     setAudioURL(null);
     setRecordingTime(0);
     setError(null);
+    setUploadedFile(null);
+  };
+
+  const processFile = async (file: File) => {
+    // Validate file type
+    const validTypes = ['audio/wav', 'audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp3'];
+    const validExtensions = ['.wav', '.webm', '.ogg', '.mp3', '.m4a'];
+
+    const isValidType = validTypes.some(type => file.type === type);
+    const isValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+    if (!isValidType && !isValidExtension) {
+      setError('Invalid file format. Please upload WAV, WebM, OGG, or MP3 files.');
+      return;
+    }
+
+    // Validate file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      setError('File too large. Maximum size is 50MB.');
+      return;
+    }
+
+    setError(null);
+    setUploadedFile(file);
+
+    // Create blob URL for preview
+    const url = URL.createObjectURL(file);
+    setAudioURL(url);
+
+    // Calculate duration using audio element
+    try {
+      const audio = new Audio(url);
+      await new Promise((resolve, reject) => {
+        audio.addEventListener('loadedmetadata', resolve);
+        audio.addEventListener('error', reject);
+      });
+      const duration = audio.duration;
+
+      // Convert file to blob if needed (it already is a Blob)
+      onRecordingComplete(file, duration);
+    } catch (err) {
+      console.error('Error loading audio file:', err);
+      setError('Could not load audio file. Please try a different file.');
+      setAudioURL(null);
+      setUploadedFile(null);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      await processFile(file);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -167,8 +249,40 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
 
   return (
     <div className="space-y-4">
-      {/* Microphone Selector */}
-      {!isRecording && !audioURL && audioDevices.length > 0 && (
+      {/* Mode Selector - Only show when not recording and no audio */}
+      {!isRecording && !audioURL && (
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+          <button
+            onClick={() => setMode('record')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              mode === 'record'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+            </svg>
+            Record
+          </button>
+          <button
+            onClick={() => setMode('upload')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              mode === 'upload'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+            Upload File
+          </button>
+        </div>
+      )}
+
+      {/* Microphone Selector - Only in record mode */}
+      {!isRecording && !audioURL && mode === 'record' && audioDevices.length > 0 && (
         <Select
           label="Microphone"
           value={selectedDeviceId}
@@ -179,6 +293,38 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
           }))}
           helperText="Select the microphone to use for recording"
         />
+      )}
+
+      {/* File Upload Area - Only in upload mode */}
+      {!isRecording && !audioURL && mode === 'upload' && (
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/wav,audio/webm,audio/ogg,audio/mpeg,audio/mp3,.wav,.webm,.ogg,.mp3,.m4a"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="audio-file-input"
+          />
+          <label
+            htmlFor="audio-file-input"
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-lg appearance-none cursor-pointer hover:border-gray-400 focus:outline-none"
+          >
+            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="mt-2 text-sm text-gray-500">
+              Click to upload or drag and drop
+            </span>
+            <span className="mt-1 text-xs text-gray-400">
+              WAV, WebM, OGG, or MP3 (max 50MB)
+            </span>
+          </label>
+        </div>
       )}
 
       {error && (
@@ -235,7 +381,7 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 60 }: VoiceRe
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-3">
-        {!isRecording && !audioURL && (
+        {!isRecording && !audioURL && mode === 'record' && (
           <Button onClick={startRecording} variant="primary" size="lg">
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
