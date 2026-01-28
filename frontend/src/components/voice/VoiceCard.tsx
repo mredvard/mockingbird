@@ -38,8 +38,7 @@ export function VoiceCard({ voice, onSelect, onDelete, onViewTranscription, sele
   return (
     <Card
       elevated={selected}
-      className={`transition-all ${selected ? 'ring-2 ring-blue-500' : 'hover:shadow-md'} cursor-pointer`}
-      onClick={onSelect}
+      className={`transition-all ${selected ? 'ring-2 ring-blue-500' : 'hover:shadow-md'}`}
     >
       <CardBody className="space-y-3">
         <div className="flex items-start justify-between">

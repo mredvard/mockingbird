@@ -10,7 +10,7 @@ import type { Voice } from '../types';
 
 export function VoiceLibrary() {
   const navigate = useNavigate();
-  const { voices, isLoading, createVoice, deleteVoice, isCreating } = useVoices();
+  const { voices, isLoading, createVoice, deleteVoice: deleteVoiceMutation, isCreating } = useVoices();
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(false);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function VoiceLibrary() {
 
   const handleDeleteVoice = async (voiceId: string) => {
     try {
-      await deleteVoice(voiceId);
+      await deleteVoiceMutation(voiceId);
     } catch (error) {
       console.error('Failed to delete voice:', error);
       alert('Failed to delete voice. Please try again.');
